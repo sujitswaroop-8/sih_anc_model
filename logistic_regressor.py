@@ -74,3 +74,81 @@ noise_label=0
 X_train=np.vstack([speech_train,fan_train]) #vertical stack 
 y_train=np.concatenate([[1]*len(speech_train),[0]*len(fan_train)])
 
+
+speech_label=1
+noise_label=0
+X_train=np.vstack([speech_train,fan_train]) #vertical stack 
+
+y_train=np.concatenate([[1]*len(speech_train),[0]*len(fan_train)])
+
+#now shuffle training data
+from sklearn.utils import shuffle
+X_train,y_train=shuffle(X_train,y_train,random_state=42) #the mapping of X and y is not lost as they both get the same shuffle
+y_train
+
+#FEATURE SCALING
+from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+scaler = StandardScaler()
+X_train_scaled=scaler.fit_transform(X_train)
+plt.scatter(
+    X_train_scaled[:, 0], #first feature, and all the rows (audio)
+    X_train_scaled[:, 1], #second feature,and all the rows (audio)
+    c=y_train, #one colour for speech, the other for noise
+    alpha=0.5 #50% transparency
+)
+
+#Train the Logistic Regression model
+from sklearn.linear_model import LogisticRegression
+model=LogisticRegression(class_weight="balanced",max_iter=1000)
+model.fit(X_train_scaled,y_train)
+
+
+#dev set (validation)
+speech_dev=[]
+for i in range (500):
+    features=extract_features(D["dev"][i])
+    speech_dev.append(features)
+fan_dev=[]
+for i in range(280,340):
+    features=extract_features(fan_noise[i])
+    fan_dev.append(features)
+
+X_dev=np.vstack([speech_dev,fan_dev])
+y_dev=np.concatenate([[1]*len(speech_dev),[0]*len(fan_dev)])
+#Scale X_dev
+X_dev_scaled=scaler.transform(X_dev) #use the statistics learned from the scaling of training data
+
+#make predictions
+y_pred=model.predict(X_dev_scaled)
+print(y_pred)
+print(y_dev)
+
+#TESTING
+speech_test=[]
+for i in range (500):
+    features=extract_features(D["test"][i])
+    speech_test.append(features)
+fan_test=[]
+for i in range(340,400):
+    features=extract_features(fan_noise[i])
+    fan_test.append(features)
+#scaling the test data
+X_test=np.vstack([speech_test,fan_test])
+y_test=np.concatenate([[1]*len(speech_test),[0]*len(fan_test)])
+#Scale X_test
+X_test_scaled=scaler.transform(X_test) #use the statistics learned from the scaling of training data
+
+
+#make predictions
+y_pred=model.predict(X_test_scaled)
+print(y_pred)
+print(y_test)
+
+#metrics
+from sklearn.metrics import confusion_matrix, classification_report
+print(confusion_matrix(y_test,y_pred))
+print(classification_report(y_test,y_pred))
+score = model.score(X_test_scaled, y_test)
+print(score)
+
