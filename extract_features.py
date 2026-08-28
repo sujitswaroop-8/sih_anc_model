@@ -9,11 +9,6 @@ import librosa
 
 BASE = r"C:\Users\padhi\Downloads\siH26052_data"
 
-DATASET = "train_new"
-
-CLEAN_DIR = os.path.join(BASE, DATASET, "clean")
-NOISY_DIR = os.path.join(BASE, DATASET, "noisy")
-
 OUTPUT_DIR = os.path.join(BASE, "features")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -22,150 +17,177 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # SETTINGS
 # =========================
 
-SAMPLE_RATE = 16000
-
 N_FFT = 512
 HOP_LENGTH = 256
 
-MAX_FILES = 4000
+DATASETS = {
+    "train_new": 4000,
+    "dev_new": 500,
+    "test_new": 500
+}
 
 # =========================
-# GET FILES
+# FUNCTION
 # =========================
 
-files = [
-    f for f in os.listdir(CLEAN_DIR)
-    if f.lower().endswith(".wav")
-]
+def extract_dataset(dataset, max_files):
 
-files.sort()
-
-# Use only 4000 files
-files = files[:MAX_FILES]
-
-print("Files selected:", len(files))
-
-# =========================
-# STORE FEATURES
-# =========================
-
-X_list = []
-y_list = []
-
-# =========================
-# PROCESS FILES
-# =========================
-
-for i, filename in enumerate(files):
-
-    clean_path = os.path.join(
-        CLEAN_DIR,
-        filename
+    clean_dir = os.path.join(
+        BASE,
+        dataset,
+        "clean"
     )
 
-    noisy_path = os.path.join(
-        NOISY_DIR,
-        filename
+    noisy_dir = os.path.join(
+        BASE,
+        dataset,
+        "noisy"
     )
 
-    try:
+    files = [
+        f for f in os.listdir(clean_dir)
+        if f.lower().endswith(".wav")
+    ]
 
-        # -------------------------
-        # Load audio
-        # -------------------------
+    files.sort()
 
-        clean, sr_clean = sf.read(clean_path)
-        noisy, sr_noisy = sf.read(noisy_path)
+    files = files[:max_files]
 
-        clean = clean.astype(np.float32)
-        noisy = noisy.astype(np.float32)
+    print("\n" + "=" * 50)
+    print(dataset)
+    print("=" * 50)
 
-        # -------------------------
-        # STFT
-        # -------------------------
+    print("Files selected:", len(files))
 
-        clean_stft = librosa.stft(
-            clean,
-            n_fft=N_FFT,
-            hop_length=HOP_LENGTH
+    X_list = []
+    y_list = []
+
+    for i, filename in enumerate(files):
+
+        clean_path = os.path.join(
+            clean_dir,
+            filename
         )
 
-        noisy_stft = librosa.stft(
-            noisy,
-            n_fft=N_FFT,
-            hop_length=HOP_LENGTH
+        noisy_path = os.path.join(
+            noisy_dir,
+            filename
         )
 
-        # -------------------------
-        # Magnitude
-        # -------------------------
+        try:
 
-        clean_mag = np.abs(clean_stft)
-        noisy_mag = np.abs(noisy_stft)
+            # -------------------------
+            # Load audio
+            # -------------------------
 
-        # -------------------------
-        # Convert:
-        # frequency × time
-        #
-        # to:
-        # time × frequency
-        # -------------------------
+            clean, sr_clean = sf.read(clean_path)
+            noisy, sr_noisy = sf.read(noisy_path)
 
-        X = noisy_mag.T
-        y = clean_mag.T
+            clean = clean.astype(np.float32)
+            noisy = noisy.astype(np.float32)
 
-        X_list.append(X)
-        y_list.append(y)
+            # -------------------------
+            # STFT
+            # -------------------------
 
-        # -------------------------
-        # Progress
-        # -------------------------
-
-        if (i + 1) % 100 == 0:
-
-            print(
-                f"Processed {i + 1}/{len(files)}"
+            clean_stft = librosa.stft(
+                clean,
+                n_fft=N_FFT,
+                hop_length=HOP_LENGTH
             )
 
-    except Exception as e:
+            noisy_stft = librosa.stft(
+                noisy,
+                n_fft=N_FFT,
+                hop_length=HOP_LENGTH
+            )
 
-        print(
-            "Error:",
-            filename,
-            e
-        )
+            # -------------------------
+            # Magnitude
+            # -------------------------
+
+            clean_mag = np.abs(clean_stft)
+            noisy_mag = np.abs(noisy_stft)
+
+            # -------------------------
+            # Time × Frequency
+            # -------------------------
+
+            X = noisy_mag.T
+            y = clean_mag.T
+
+            X_list.append(X)
+            y_list.append(y)
+
+            if (i + 1) % 100 == 0:
+                print(
+                    f"Processed {i + 1}/{len(files)}"
+                )
+
+        except Exception as e:
+
+            print(
+                "Error:",
+                filename,
+                e
+            )
+
+    # =========================
+    # COMBINE
+    # =========================
+
+    X = np.vstack(X_list)
+    y = np.vstack(y_list)
+
+    print("\nX shape:", X.shape)
+    print("y shape:", y.shape)
+
+    # =========================
+    # SAVE
+    # =========================
+
+    prefix = dataset.replace(
+        "_new",
+        ""
+    )
+
+    X_path = os.path.join(
+        OUTPUT_DIR,
+        f"X_{prefix}.npy"
+    )
+
+    y_path = os.path.join(
+        OUTPUT_DIR,
+        f"y_{prefix}.npy"
+    )
+
+    np.save(X_path, X)
+    np.save(y_path, y)
+
+    print("Saved:", X_path)
+    print("Saved:", y_path)
+
 
 # =========================
-# COMBINE
+# RUN
 # =========================
 
-print("\nCombining features...")
+for dataset, max_files in DATASETS.items():
 
-X_train = np.vstack(X_list)
-y_train = np.vstack(y_list)
+    extract_dataset(
+        dataset,
+        max_files
+    )
 
-print("X_train shape:", X_train.shape)
-print("y_train shape:", y_train.shape)
+print("\nALL DATASETS PROCESSED!")
 
-# =========================
-# SAVE
-# =========================
 
-X_path = os.path.join(
-    OUTPUT_DIR,
-    "X_train.npy"
-)
 
-y_path = os.path.join(
-    OUTPUT_DIR,
-    "y_train.npy"
-)
 
-np.save(X_path, X_train)
-np.save(y_path, y_train)
 
-print("\nSaved:")
-print(X_path)
-print(y_path)
+       
 
-print("\nDONE!")
+
+
+
+
