@@ -9,6 +9,11 @@ import librosa
 
 BASE = r"C:\Users\padhi\Downloads\siH26052_data"
 
+DATASET = "train_new"
+
+CLEAN_DIR = os.path.join(BASE, DATASET, "clean")
+NOISY_DIR = os.path.join(BASE, DATASET, "noisy")
+
 OUTPUT_DIR = os.path.join(BASE, "features")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -17,173 +22,153 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # SETTINGS
 # =========================
 
+SAMPLE_RATE = 16000
+
 N_FFT = 512
 HOP_LENGTH = 256
 
-DATASETS = {
-    "train_new": 4000,
-    "dev_new": 500,
-    "test_new": 500
-}
+MAX_FILES = 4000
 
 # =========================
-# FUNCTION
+# GET FILES
 # =========================
 
-def extract_dataset(dataset, max_files):
+files = [
+    f for f in os.listdir(CLEAN_DIR)
+    if f.lower().endswith(".wav")
+]
 
-    clean_dir = os.path.join(
-        BASE,
-        dataset,
-        "clean"
+files.sort()
+
+# Use only 4000 files
+files = files[:MAX_FILES]
+
+print("Files selected:", len(files))
+
+# =========================
+# STORE FEATURES
+# =========================
+
+X_list = []
+y_list = []
+
+# =========================
+# PROCESS FILES
+# =========================
+
+for i, filename in enumerate(files):
+
+    clean_path = os.path.join(
+        CLEAN_DIR,
+        filename
     )
 
-    noisy_dir = os.path.join(
-        BASE,
-        dataset,
-        "noisy"
+    noisy_path = os.path.join(
+        NOISY_DIR,
+        filename
     )
 
-    files = [
-        f for f in os.listdir(clean_dir)
-        if f.lower().endswith(".wav")
-    ]
+    try:
 
-    files.sort()
+        # -------------------------
+        # Load audio
+        # -------------------------
 
-    files = files[:max_files]
+        clean, sr_clean = sf.read(clean_path)
+        noisy, sr_noisy = sf.read(noisy_path)
 
-    print("\n" + "=" * 50)
-    print(dataset)
-    print("=" * 50)
+        clean = clean.astype(np.float32)
+        noisy = noisy.astype(np.float32)
 
-    print("Files selected:", len(files))
+        # -------------------------
+        # STFT
+        # -------------------------
 
-    X_list = []
-    y_list = []
-
-    for i, filename in enumerate(files):
-
-        clean_path = os.path.join(
-            clean_dir,
-            filename
+        clean_stft = librosa.stft(
+            clean,
+            n_fft=N_FFT,
+            hop_length=HOP_LENGTH
         )
 
-        noisy_path = os.path.join(
-            noisy_dir,
-            filename
+        noisy_stft = librosa.stft(
+            noisy,
+            n_fft=N_FFT,
+            hop_length=HOP_LENGTH
         )
 
-        try:
+        # -------------------------
+        # Magnitude
+        # -------------------------
 
-            # -------------------------
-            # Load audio
-            # -------------------------
+        clean_mag = np.abs(clean_stft)
+        noisy_mag = np.abs(noisy_stft)
 
-            clean, sr_clean = sf.read(clean_path)
-            noisy, sr_noisy = sf.read(noisy_path)
+        # -------------------------
+        # Convert:
+        # frequency × time
+        #
+        # to:
+        # time × frequency
+        # -------------------------
 
-            clean = clean.astype(np.float32)
-            noisy = noisy.astype(np.float32)
+        X = noisy_mag.T
+        y = clean_mag.T
 
-            # -------------------------
-            # STFT
-            # -------------------------
+        X_list.append(X)
+        y_list.append(y)
 
-            clean_stft = librosa.stft(
-                clean,
-                n_fft=N_FFT,
-                hop_length=HOP_LENGTH
-            )
+        # -------------------------
+        # Progress
+        # -------------------------
 
-            noisy_stft = librosa.stft(
-                noisy,
-                n_fft=N_FFT,
-                hop_length=HOP_LENGTH
-            )
-
-            # -------------------------
-            # Magnitude
-            # -------------------------
-
-            clean_mag = np.abs(clean_stft)
-            noisy_mag = np.abs(noisy_stft)
-
-            # -------------------------
-            # Time × Frequency
-            # -------------------------
-
-            X = noisy_mag.T
-            y = clean_mag.T
-
-            X_list.append(X)
-            y_list.append(y)
-
-            if (i + 1) % 100 == 0:
-                print(
-                    f"Processed {i + 1}/{len(files)}"
-                )
-
-        except Exception as e:
+        if (i + 1) % 100 == 0:
 
             print(
-                "Error:",
-                filename,
-                e
+                f"Processed {i + 1}/{len(files)}"
             )
 
-    # =========================
-    # COMBINE
-    # =========================
+    except Exception as e:
 
-    X = np.vstack(X_list)
-    y = np.vstack(y_list)
-
-    print("\nX shape:", X.shape)
-    print("y shape:", y.shape)
-
-    # =========================
-    # SAVE
-    # =========================
-
-    prefix = dataset.replace(
-        "_new",
-        ""
-    )
-
-    X_path = os.path.join(
-        OUTPUT_DIR,
-        f"X_{prefix}.npy"
-    )
-
-    y_path = os.path.join(
-        OUTPUT_DIR,
-        f"y_{prefix}.npy"
-    )
-
-    np.save(X_path, X)
-    np.save(y_path, y)
-
-    print("Saved:", X_path)
-    print("Saved:", y_path)
-
+        print(
+            "Error:",
+            filename,
+            e
+        )
 
 # =========================
-# RUN
+# COMBINE
 # =========================
 
-for dataset, max_files in DATASETS.items():
+print("\nCombining features...")
 
-    extract_dataset(
-        dataset,
-        max_files
-    )
+X_train = np.vstack(X_list)
+y_train = np.vstack(y_list)
 
-print("\nALL DATASETS PROCESSED!")
+print("X_train shape:", X_train.shape)
+print("y_train shape:", y_train.shape)
 
+# =========================
+# SAVE
+# =========================
 
+X_path = os.path.join(
+    OUTPUT_DIR,
+    "X_train.npy"
+)
 
+y_path = os.path.join(
+    OUTPUT_DIR,
+    "y_train.npy"
+)
 
+np.save(X_path, X_train)
+np.save(y_path, y_train)
+
+print("\nSaved:")
+print(X_path)
+print(y_path)
+
+print("\nDONE!")
 
        
 
