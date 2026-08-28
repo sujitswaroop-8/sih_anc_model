@@ -1,4 +1,5 @@
 import os
+import random
 import numpy as np
 import soundfile as sf
 import librosa
@@ -21,10 +22,12 @@ SAMPLE_RATE = 16000
 SNR_LEVELS = [5, 10, 15]
 
 DATASETS = {
-    "train_new": 4000,
+    "train_new": 5000,
     "dev_new": 500,
     "test_new": 500
 }
+
+random.seed(42)
 
 # =========================
 # GET NOISE FILES
@@ -33,17 +36,11 @@ DATASETS = {
 noise_files = []
 
 for root, dirs, files in os.walk(NOISE_DIR):
-
     for file in files:
-
         if file.lower().endswith((".wav", ".flac")):
-
-            noise_files.append(
-                os.path.join(root, file)
-            )
+            noise_files.append(os.path.join(root, file))
 
 print("Noise files found:", len(noise_files))
-
 
 # =========================
 # FUNCTION: MIX NOISE
@@ -53,51 +50,36 @@ def add_noise(clean, noise, snr_db):
 
     # Make noise same length as speech
     if len(noise) < len(clean):
-
-        repetitions = int(
-            np.ceil(len(clean) / len(noise))
-        )
-
-        noise = np.tile(
-            noise,
-            repetitions
-        )
+        repetitions = int(np.ceil(len(clean) / len(noise)))
+        noise = np.tile(noise, repetitions)
 
     noise = noise[:len(clean)]
 
-    # Signal power
+    # Calculate signal power
     speech_power = np.mean(clean ** 2)
 
-    # Noise power
+    # Calculate noise power
     noise_power = np.mean(noise ** 2)
 
     # Avoid division by zero
     if noise_power == 0:
-
         return clean
 
-    # Desired noise power
-    desired_noise_power = (
-        speech_power /
-        (10 ** (snr_db / 10))
-    )
+    # Desired noise power for given SNR
+    desired_noise_power = speech_power / (10 ** (snr_db / 10))
 
     # Scale noise
     noise = noise * np.sqrt(
-        desired_noise_power /
-        noise_power
+        desired_noise_power / noise_power
     )
 
     # Mix
     noisy = clean + noise
 
     # Prevent clipping
-    max_value = np.max(
-        np.abs(noisy)
-    )
+    max_value = np.max(np.abs(noisy))
 
     if max_value > 1:
-
         noisy = noisy / max_value
 
     return noisy
@@ -109,82 +91,37 @@ def add_noise(clean, noise, snr_db):
 
 for dataset, expected_count in DATASETS.items():
 
-    input_dir = os.path.join(
-        BASE,
-        dataset
-    )
+    input_dir = os.path.join(BASE, dataset)
 
     clean_output = os.path.join(
-        OUTPUT_BASE,
-        dataset,
-        "clean"
+        OUTPUT_BASE, dataset, "clean"
     )
 
     noisy_output = os.path.join(
-        OUTPUT_BASE,
-        dataset,
-        "noisy"
+        OUTPUT_BASE, dataset, "noisy"
     )
 
-    os.makedirs(
-        clean_output,
-        exist_ok=True
-    )
+    os.makedirs(clean_output, exist_ok=True)
+    os.makedirs(noisy_output, exist_ok=True)
 
-    os.makedirs(
-        noisy_output,
-        exist_ok=True
-    )
-
-    # =========================
-    # FIND SPEECH FILES
-    # =========================
-
+    # Find speech files
     speech_files = []
 
-    for root, dirs, files in os.walk(
-        input_dir
-    ):
+    for root, dirs, files in os.walk(input_dir):
 
         for file in files:
 
-            if file.lower().endswith(
-                (".wav", ".flac")
-            ):
+            if file.lower().endswith((".wav", ".flac")):
 
                 speech_files.append(
-                    os.path.join(
-                        root,
-                        file
-                    )
+                    os.path.join(root, file)
                 )
 
-    speech_files.sort()
+    print("\nProcessing:", dataset)
+    print("Speech files:", len(speech_files))
 
-    # Limit number of clean speech files
-    speech_files = speech_files[:expected_count]
-
-    print("\n" + "=" * 50)
-    print("Processing:", dataset)
-    print("=" * 50)
-
-    print(
-        "Clean speech files:",
-        len(speech_files)
-    )
-
-    print(
-        "SNR levels:",
-        SNR_LEVELS
-    )
-
-    # =========================
-    # PROCESS SPEECH
-    # =========================
-
-    for i, speech_file in enumerate(
-        speech_files
-    ):
+    # Process every speech file
+    for i, speech_file in enumerate(speech_files):
 
         try:
 
@@ -192,19 +129,13 @@ for dataset, expected_count in DATASETS.items():
             # Load clean speech
             # -------------------------
 
-            clean, sr = sf.read(
-                speech_file
-            )
+            clean, sr = sf.read(speech_file)
 
-            # Stereo → mono
+            # Convert stereo → mono if necessary
             if clean.ndim > 1:
+                clean = np.mean(clean, axis=1)
 
-                clean = np.mean(
-                    clean,
-                    axis=1
-                )
-
-            # Resample
+            # Resample speech if necessary
             if sr != SAMPLE_RATE:
 
                 clean = librosa.resample(
@@ -213,26 +144,62 @@ for dataset, expected_count in DATASETS.items():
                     target_sr=SAMPLE_RATE
                 )
 
-            clean = clean.astype(
-                np.float32
+            clean = clean.astype(np.float32)
+
+            # -------------------------
+            # Select random noise
+            # -------------------------
+
+            noise_file = random.choice(noise_files)
+
+            noise, noise_sr = sf.read(noise_file)
+
+            # Stereo → mono
+            if noise.ndim > 1:
+                noise = np.mean(noise, axis=1)
+
+            # 44.1 kHz → 16 kHz
+            if noise_sr != SAMPLE_RATE:
+
+                noise = librosa.resample(
+                    noise.astype(np.float32),
+                    orig_sr=noise_sr,
+                    target_sr=SAMPLE_RATE
+                )
+
+            noise = noise.astype(np.float32)
+
+            # -------------------------
+            # Select SNR
+            # -------------------------
+
+            snr = random.choice(SNR_LEVELS)
+
+            # -------------------------
+            # Create noisy speech
+            # -------------------------
+
+            noisy = add_noise(
+                clean,
+                noise,
+                snr
             )
 
             # -------------------------
-            # Original filename
+            # Save files
             # -------------------------
 
             filename = os.path.splitext(
-                os.path.basename(
-                    speech_file
-                )
+                os.path.basename(speech_file)
             )[0]
-
-            # -------------------------
-            # Save clean speech ONCE
-            # -------------------------
 
             clean_path = os.path.join(
                 clean_output,
+                filename + ".wav"
+            )
+
+            noisy_path = os.path.join(
+                noisy_output,
                 filename + ".wav"
             )
 
@@ -242,73 +209,11 @@ for dataset, expected_count in DATASETS.items():
                 SAMPLE_RATE
             )
 
-            # =========================
-            # CREATE ALL 3 SNR VERSIONS
-            # =========================
-
-            for snr in SNR_LEVELS:
-
-                # -------------------------
-                # Select random noise
-                # -------------------------
-
-                noise_file = np.random.choice(
-                    noise_files
-                )
-
-                noise, noise_sr = sf.read(
-                    noise_file
-                )
-
-                # Stereo → mono
-                if noise.ndim > 1:
-
-                    noise = np.mean(
-                        noise,
-                        axis=1
-                    )
-
-                # Resample noise
-                if noise_sr != SAMPLE_RATE:
-
-                    noise = librosa.resample(
-                        noise.astype(np.float32),
-                        orig_sr=noise_sr,
-                        target_sr=SAMPLE_RATE
-                    )
-
-                noise = noise.astype(
-                    np.float32
-                )
-
-                # -------------------------
-                # Add noise
-                # -------------------------
-
-                noisy = add_noise(
-                    clean,
-                    noise,
-                    snr
-                )
-
-                # -------------------------
-                # Save noisy speech
-                # -------------------------
-
-                noisy_filename = (
-                    f"{filename}_{snr}dB.wav"
-                )
-
-                noisy_path = os.path.join(
-                    noisy_output,
-                    noisy_filename
-                )
-
-                sf.write(
-                    noisy_path,
-                    noisy,
-                    SAMPLE_RATE
-                )
+            sf.write(
+                noisy_path,
+                noisy,
+                SAMPLE_RATE
+            )
 
             # -------------------------
             # Progress
@@ -317,9 +222,7 @@ for dataset, expected_count in DATASETS.items():
             if (i + 1) % 100 == 0:
 
                 print(
-                    f"Processed "
-                    f"{i + 1}/{len(speech_files)} "
-                    f"speech files"
+                    f"Processed {i + 1}/{len(speech_files)}"
                 )
 
         except Exception as e:
@@ -329,6 +232,5 @@ for dataset, expected_count in DATASETS.items():
                 speech_file,
                 e
             )
-
 
 print("\nDONE!")
