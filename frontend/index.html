@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ClearWave — AI Speech Enhancement | SIH 2026</title>
+<meta name="description" content="An AI model that reconstructs clean speech from noisy recordings. Built for Smart India Hackathon 2026." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0D1013;
+    --bg-panel: #161A1E;
+    --bg-panel-alt: #1B2025;
+    --border: #262B31;
+    --text: #EDEBE6;
+    --text-muted: #8C9198;
+    --accent: #FFB020;
+    --accent-dim: #4d3813;
+    --accent-2: #5EEAD4;
+    --accent-2-dim: #163a35;
+    --radius: 10px;
+    --display: 'Space Grotesk', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+    --body: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: inherit; }
+
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 18px;
+    height: 1px;
+    background: var(--accent);
+    display: inline-block;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--display);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  section { padding: 96px 0; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+
+  /* ---------- NAV ---------- */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    backdrop-filter: blur(10px);
+    background: rgba(13,16,19,0.85);
+    border-bottom: 1px solid var(--border);
+  }
+  nav.wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 18px;
+  }
+  .logo-mark {
+    width: 22px; height: 22px;
+    position: relative;
+  }
+  .badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 4px 9px;
+    border-radius: 20px;
+    margin-left: 10px;
+  }
+  .nav-links {
+    display: flex;
+    gap: 28px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-muted);
+    list-style: none;
+  }
+  .nav-links a { text-decoration: none; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--accent); }
+  .nav-links { display: none; }
+  @media (min-width: 760px) { .nav-links { display: flex; } }
+
+  /* ---------- BUTTONS ---------- */
+  .btn {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    padding: 12px 20px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--accent); color: #1a1204; font-weight: 600; }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-ghost { border-color: var(--border); color: var(--text); background: transparent; }
+  .btn-ghost:hover { border-color: var(--accent); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ---------- HERO ---------- */
+  .hero { padding-top: 90px; padding-bottom: 70px; }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 48px;
+    align-items: center;
+  }
+  @media (min-width: 900px) {
+    .hero-grid { grid-template-columns: 1.1fr 1fr; }
+  }
+  .hero h1 {
+    font-size: clamp(36px, 5.5vw, 58px);
+    line-height: 1.05;
+    margin-bottom: 22px;
+  }
+  .hero h1 span { color: var(--accent-2); }
+  .hero p.lede {
+    font-size: 17px;
+    color: var(--text-muted);
+    max-width: 46ch;
+    margin-bottom: 32px;
+  }
+  .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; }
+
+  .scope-panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .scope-header {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  .scope-header .dot { color: var(--accent-2); }
+  canvas#heroWave { width: 100%; height: 220px; display: block; }
+  .scope-legend {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 11px;
+    margin-top: 10px;
+    color: var(--text-muted);
+  }
+  .scope-legend .noisy::before { content: "●"; color: var(--accent); margin-right: 6px; }
+  .scope-legend .clean::before { content: "●"; color: var(--accent-2); margin-right: 6px; }
+
+  /* ---------- PROBLEM ---------- */
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    margin-top: 36px;
+  }
+  @media (min-width: 760px) { .grid-3 { grid-template-columns: repeat(3, 1fr); } }
+  .card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+  }
+  .card h3 { font-size: 17px; margin-bottom: 10px; }
+  .card p { color: var(--text-muted); font-size: 14.5px; }
+  .card .num {
+    font-family: var(--mono);
+    color: var(--accent);
+    font-size: 13px;
+    margin-bottom: 14px;
+    display: block;
+  }
+
+  h2 { font-size: clamp(26px, 3.5vw, 34px); margin-bottom: 14px; }
+  .section-lede { color: var(--text-muted); max-width: 60ch; margin-bottom: 8px; }
+
+  /* ---------- PIPELINE ---------- */
+  .pipeline {
+    margin-top: 48px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  @media (min-width: 900px) {
+    .pipeline { grid-template-columns: repeat(5, 1fr); }
+  }
+  .step {
+    position: relative;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-left: none;
+  }
+  .pipeline .step:first-child { border-left: 1px solid var(--border); }
+  @media (max-width: 899px) {
+    .pipeline .step { border-left: 1px solid var(--border); border-top: none; }
+    .pipeline .step:first-child { border-top: 1px solid var(--border); }
+  }
+  .step .step-num {
+    font-family: var(--mono);
+    color: var(--accent);
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+  .step h4 { font-family: var(--display); font-size: 15.5px; margin-bottom: 8px; }
+  .step p { font-size: 13px; color: var(--text-muted); }
+
+  /* ---------- DEMO ---------- */
+  .demo-panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    margin-top: 36px;
+  }
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 20px;
+    margin-bottom: 24px;
+  }
+  .status-pill .led { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
+  .status-pill.ok .led { background: var(--accent-2); }
+  .status-pill.bad .led { background: #ef4444; }
+
+  .dropzone {
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 42px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .dropzone:hover, .dropzone.drag { border-color: var(--accent); background: rgba(255,176,32,0.04); }
+  .dropzone p { color: var(--text-muted); font-size: 14px; margin-top: 8px; }
+  .dropzone .dz-title { font-family: var(--mono); font-size: 13.5px; }
+  input[type="file"] { display: none; }
+
+  .demo-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  .filename { font-family: var(--mono); font-size: 13px; color: var(--text-muted); }
+
+  .demo-error {
+    margin-top: 18px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: #ef4444;
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.25);
+    padding: 12px 14px;
+    border-radius: 8px;
+    display: none;
+  }
+
+  .results-audio {
+    margin-top: 32px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  @media (min-width: 760px) { .results-audio { grid-template-columns: 1fr 1fr; } }
+  .audio-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    background: var(--bg-panel-alt);
+  }
+  .audio-card .label {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .audio-card.noisy .label { color: var(--accent); }
+  .audio-card.clean .label { color: var(--accent-2); }
+  canvas.wave-mini { width: 100%; height: 60px; display: block; margin-bottom: 10px; }
+  audio { width: 100%; }
+
+  .snr-row {
+    display: none;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-top: 20px;
+  }
+  .snr-box {
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--accent-2);
+    background: var(--bg-panel-alt);
+    padding: 14px 16px;
+    border-radius: 6px;
+    text-align: center;
+  }
+  .snr-box .snr-val {
+    font-family: var(--mono);
+    font-size: 20px;
+    color: var(--accent-2);
+  }
+  .snr-box .snr-lbl {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-top: 4px;
+  }
+  .snr-note {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 12px;
+    display: none;
+  }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.25);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- RESULTS / READOUTS ---------- */
+  .readouts {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-top: 40px;
+  }
+  @media (min-width: 760px) { .readouts { grid-template-columns: repeat(4, 1fr); } }
+  .readout {
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--accent);
+    background: var(--bg-panel);
+    padding: 18px;
+    border-radius: 6px;
+  }
+  .readout .val {
+    font-family: var(--mono);
+    font-size: 24px;
+    color: var(--accent-2);
+    margin-bottom: 6px;
+  }
+  .readout .lbl {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ---------- TEAM ---------- */
+  .team-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-top: 36px;
+  }
+  @media (min-width: 760px) { .team-grid { grid-template-columns: repeat(4, 1fr); } }
+  .member {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: left;
+  }
+  .member .avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    margin-bottom: 14px;
+  }
+  .member h4 { font-family: var(--display); font-size: 15px; }
+  .member span { font-family: var(--mono); font-size: 12px; color: var(--text-muted); }
+
+  footer {
+    padding: 40px 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="wrap">
+    <div class="logo">
+      <svg class="logo-mark" viewBox="0 0 24 24" fill="none">
+        <path d="M2 12h3l2-7 4 14 3-10 2 5h6" stroke="#FFB020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      ClearWave
+      <span class="badge">SIH 2026 · PS 26052</span>
+    </div>
+    <ul class="nav-links">
+      <li><a href="#problem">Problem</a></li>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#demo">Demo</a></li>
+      <li><a href="#results">Results</a></li>
+      <li><a href="#team">Team</a></li>
+    </ul>
+    <a href="#demo" class="btn btn-primary" style="display:none" id="navCta">Try it</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">Smart India Hackathon 2026</div>
+      <h1>Hear the speech.<br>Not the <span>noise</span> around it.</h1>
+      <p class="lede">
+        ClearWave is a machine-learning model that reconstructs clean speech
+        from noisy recordings — trained on thousands of paired clean and
+        noisy samples to separate a voice from what's drowning it out.
+      </p>
+      <div class="hero-ctas">
+        <a href="#demo" class="btn btn-primary">Try the live demo</a>
+        <a href="#how" class="btn btn-ghost">How it works</a>
+      </div>
+    </div>
+    <div class="scope-panel">
+      <div class="scope-header">
+        <span>LIVE SIGNAL VIEW</span>
+        <span class="dot">● MODEL ACTIVE</span>
+      </div>
+      <canvas id="heroWave"></canvas>
+      <div class="scope-legend">
+        <span class="noisy">Noisy input</span>
+        <span class="clean">Reconstructed output</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="problem">
+  <div class="wrap">
+    <div class="eyebrow">The problem</div>
+    <h2>Background noise breaks speech clarity exactly when it matters most.</h2>
+    <p class="section-lede">
+      Calls from a factory floor. Voice commands in a moving vehicle. Hearing
+      aids in a crowded room. Traditional filters remove fixed frequency
+      bands — they don't know what's speech and what isn't.
+    </p>
+    <div class="grid-3">
+      <div class="card">
+        <span class="num">01</span>
+        <h3>Non-stationary noise</h3>
+        <p>Fans, traffic, and machinery don't sound the same from second to second, so a fixed filter can't keep up.</p>
+      </div>
+      <div class="card">
+        <span class="num">02</span>
+        <h3>Speech gets lost with the noise</h3>
+        <p>Aggressive filtering that removes background sound often removes parts of the voice too.</p>
+      </div>
+      <div class="card">
+        <span class="num">03</span>
+        <h3>Needs to run on real hardware</h3>
+        <p>A usable solution has to be light enough to run close to the microphone, not just in a research notebook.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="eyebrow">How it works</div>
+    <h2>From noisy waveform to clean audio, in five steps.</h2>
+    <p class="section-lede">
+      The model never touches raw audio directly — it learns in the frequency
+      domain, where speech and noise are easier to tell apart.
+    </p>
+    <div class="pipeline">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h4>Capture</h4>
+        <p>A noisy recording comes in as a waveform at 16kHz.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h4>STFT</h4>
+        <p>Short-time Fourier transform converts it into a magnitude spectrogram and a phase map.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h4>Predict</h4>
+        <p>A neural network trained on paired clean/noisy spectrograms predicts the clean magnitude.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <h4>Reconstruct</h4>
+        <p>The predicted magnitude is recombined with the original phase.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">05</div>
+        <h4>Inverse STFT</h4>
+        <p>The result is converted back into a clean, listenable waveform.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="demo">
+  <div class="wrap">
+    <div class="eyebrow">Try it</div>
+    <h2>Upload a noisy clip, hear it cleaned up.</h2>
+    <p class="section-lede">This runs the live model — not a pre-recorded example.</p>
+
+    <div class="demo-panel">
+      <div class="status-pill" id="statusPill">
+        <span class="led"></span>
+        <span id="statusText">Checking backend connection…</span>
+      </div>
+
+      <div class="dropzone" id="dropzone">
+        <div class="dz-title">Click to choose a file, or drag one here</div>
+        <p>WAV, FLAC, MP3 or M4A — up to 25MB</p>
+        <input type="file" id="fileInput" accept=".wav,.flac,.mp3,.ogg,.m4a,audio/*" />
+      </div>
+
+      <div class="demo-actions">
+        <span class="filename" id="filenameLabel">No file selected</span>
+        <button class="btn btn-primary" id="enhanceBtn" disabled>
+          <span class="spinner" id="spinner"></span>
+          <span id="enhanceBtnText">Enhance audio</span>
+        </button>
+      </div>
+
+      <div class="demo-error" id="demoError"></div>
+
+      <div class="results-audio" id="resultsAudio" style="display:none">
+        <div class="audio-card noisy">
+          <div class="label">Original (noisy)</div>
+          <canvas class="wave-mini" id="waveNoisy"></canvas>
+          <audio id="playerNoisy" controls></audio>
+        </div>
+        <div class="audio-card clean">
+          <div class="label">Enhanced</div>
+          <canvas class="wave-mini" id="waveClean"></canvas>
+          <audio id="playerClean" controls></audio>
+        </div>
+      </div>
+      <div class="snr-row" id="snrRow">
+        <div class="snr-box">
+          <div class="snr-val" id="snrOriginal">–</div>
+          <div class="snr-lbl">Original SNR</div>
+        </div>
+        <div class="snr-box">
+          <div class="snr-val" id="snrEnhanced">–</div>
+          <div class="snr-lbl">Enhanced SNR</div>
+        </div>
+        <div class="snr-box">
+          <div class="snr-val" id="snrImprovement">–</div>
+          <div class="snr-lbl">Improvement</div>
+        </div>
+      </div>
+      <div class="snr-note" id="snrNote">
+        * Estimated from the audio itself (no clean reference exists for uploaded files) — indicative, not a lab measurement.
+      </div>
+
+      <div style="margin-top:16px" id="downloadWrap"></div>
+    </div>
+  </div>
+</section>
+
+<section id="results">
+  <div class="wrap">
+    <div class="eyebrow">Under the hood</div>
+    <h2>Model architecture &amp; validation results</h2>
+    <p class="section-lede">Edit these to match your team's final numbers before submission.</p>
+    <div class="readouts">
+      <div class="readout"><div class="val">MLP 128·64</div><div class="lbl">Architecture</div></div>
+      <div class="readout"><div class="val">16 kHz</div><div class="lbl">Sample rate</div></div>
+      <div class="readout"><div class="val">512 / 256</div><div class="lbl">FFT size / hop</div></div>
+      <div class="readout"><div class="val">0.835</div><div class="lbl">Test R²</div></div>
+      <div class="readout"><div class="val">4,000</div><div class="lbl">Training clips</div></div>
+      <div class="readout"><div class="val">5·10·15 dB</div><div class="lbl">SNR levels trained on</div></div>
+      <div class="readout"><div class="val">0.064</div><div class="lbl">Test MSE</div></div>
+      <div class="readout"><div class="val">0.077</div><div class="lbl">Test MAE</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="team">
+  <div class="wrap">
+    <div class="eyebrow">Team</div>
+    <h2>Built for SIH 2026</h2>
+    <div class="team-grid">
+      <div class="member"><div class="avatar"></div><h4>Your name</h4><span>Role</span></div>
+      <div class="member"><div class="avatar"></div><h4>Teammate</h4><span>Model / ML</span></div>
+      <div class="member"><div class="avatar"></div><h4>Teammate</h4><span>Hardware</span></div>
+      <div class="member"><div class="avatar"></div><h4>Teammate</h4><span>Role</span></div>
+    </div>
+  </div>
+</section>
+
+<footer class="wrap">
+  <span>ClearWave — Smart India Hackathon 2026</span>
+  <span><a href="#" id="githubLink">GitHub repository →</a></span>
+</footer>
+
+<script>
+  // =====================================================
+  // CONFIG — change this once your backend is deployed
+  // =====================================================
+  const API_BASE = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+    ? "http://localhost:5000"
+    : "http://localhost:5000"; // TODO: replace with your deployed backend URL, e.g. https://your-app.onrender.com
+
+  // =====================================================
+  // Hero waveform animation (decorative, noisy -> clean)
+  // =====================================================
+  const heroCanvas = document.getElementById('heroWave');
+  const heroCtx = heroCanvas.getContext('2d');
+  let t = 0;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function resizeCanvas(canvas) {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return rect;
+  }
+
+  function drawHero() {
+    const rect = resizeCanvas(heroCanvas);
+    const w = rect.width, h = rect.height, mid = h / 2;
+    heroCtx.clearRect(0, 0, w, h);
+
+    const splitX = w * 0.5;
+
+    // noisy half
+    heroCtx.beginPath();
+    heroCtx.strokeStyle = '#FFB020';
+    heroCtx.lineWidth = 2;
+    for (let x = 0; x <= splitX; x++) {
+      const noise = (Math.sin(x * 0.15 + t) * 0.5 + Math.sin(x * 0.6 + t * 2.3) * 0.3 + (Math.random() - 0.5) * 0.6);
+      const y = mid + noise * (h * 0.28);
+      x === 0 ? heroCtx.moveTo(x, y) : heroCtx.lineTo(x, y);
+    }
+    heroCtx.stroke();
+
+    // clean half
+    heroCtx.beginPath();
+    heroCtx.strokeStyle = '#5EEAD4';
+    heroCtx.lineWidth = 2.5;
+    for (let x = splitX; x <= w; x++) {
+      const clean = Math.sin((x - splitX) * 0.1 + t * 1.2);
+      const y = mid + clean * (h * 0.22);
+      x === splitX ? heroCtx.moveTo(x, y) : heroCtx.lineTo(x, y);
+    }
+    heroCtx.stroke();
+
+    // divider
+    heroCtx.strokeStyle = 'rgba(255,255,255,0.15)';
+    heroCtx.setLineDash([4, 4]);
+    heroCtx.beginPath();
+    heroCtx.moveTo(splitX, 10);
+    heroCtx.lineTo(splitX, h - 10);
+    heroCtx.stroke();
+    heroCtx.setLineDash([]);
+
+    t += reduceMotion ? 0 : 0.05;
+    requestAnimationFrame(drawHero);
+  }
+  drawHero();
+  window.addEventListener('resize', () => resizeCanvas(heroCanvas));
+
+  // =====================================================
+  // Backend health check
+  // =====================================================
+  const statusPill = document.getElementById('statusPill');
+  const statusText = document.getElementById('statusText');
+
+  async function checkHealth() {
+    try {
+      const res = await fetch(`${API_BASE}/api/health`);
+      const data = await res.json();
+      if (data.model_loaded) {
+        statusPill.className = 'status-pill ok';
+        statusText.textContent = 'Backend connected · model ready';
+      } else {
+        statusPill.className = 'status-pill bad';
+        statusText.textContent = 'Backend connected · model files not loaded yet';
+      }
+    } catch (e) {
+      statusPill.className = 'status-pill bad';
+      statusText.textContent = 'Backend not reachable — is the server running?';
+    }
+  }
+  checkHealth();
+
+  // =====================================================
+  // Upload + enhance flow
+  // =====================================================
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const filenameLabel = document.getElementById('filenameLabel');
+  const enhanceBtn = document.getElementById('enhanceBtn');
+  const enhanceBtnText = document.getElementById('enhanceBtnText');
+  const spinner = document.getElementById('spinner');
+  const demoError = document.getElementById('demoError');
+  const resultsAudio = document.getElementById('resultsAudio');
+  const downloadWrap = document.getElementById('downloadWrap');
+
+  let selectedFile = null;
+
+  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('drag');
+    if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) setFile(fileInput.files[0]);
+  });
+
+  function setFile(file) {
+    selectedFile = file;
+    filenameLabel.textContent = file.name;
+    enhanceBtn.disabled = false;
+    demoError.style.display = 'none';
+  }
+
+  function showError(msg) {
+    demoError.textContent = msg;
+    demoError.style.display = 'block';
+  }
+
+  async function drawWaveform(canvas, arrayBuffer) {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AudioCtx();
+    const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+    const data = audioBuffer.getChannelData(0);
+    const rect = resizeCanvas(canvas);
+    const c = canvas.getContext('2d');
+    const w = rect.width, h = rect.height, mid = h / 2;
+    const step = Math.ceil(data.length / w);
+    c.clearRect(0, 0, w, h);
+    c.beginPath();
+    c.strokeStyle = getComputedStyle(canvas).color || '#5EEAD4';
+    c.lineWidth = 1.2;
+    for (let x = 0; x < w; x++) {
+      let min = 1, max = -1;
+      for (let i = 0; i < step; i++) {
+        const v = data[x * step + i] || 0;
+        if (v < min) min = v;
+        if (v > max) max = v;
+      }
+      c.moveTo(x, mid + min * mid);
+      c.lineTo(x, mid + max * mid);
+    }
+    c.stroke();
+    ctx.close();
+  }
+
+  enhanceBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    demoError.style.display = 'none';
+    enhanceBtn.disabled = true;
+    spinner.style.display = 'inline-block';
+    enhanceBtnText.textContent = 'Processing…';
+
+    const formData = new FormData();
+    formData.append('audio', selectedFile);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/enhance`, { method: 'POST', body: formData });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Server returned ${res.status}`);
+      }
+      const originalSnr = res.headers.get('X-Original-SNR');
+      const enhancedSnr = res.headers.get('X-Enhanced-SNR');
+      const improvement = res.headers.get('X-SNR-Improvement');
+
+      const cleanBlob = await res.blob();
+      const cleanUrl = URL.createObjectURL(cleanBlob);
+      const noisyUrl = URL.createObjectURL(selectedFile);
+
+      document.getElementById('playerNoisy').src = noisyUrl;
+      document.getElementById('playerClean').src = cleanUrl;
+      resultsAudio.style.display = 'grid';
+
+      document.getElementById('waveNoisy').style.color = '#FFB020';
+      document.getElementById('waveClean').style.color = '#5EEAD4';
+      await drawWaveform(document.getElementById('waveNoisy'), await selectedFile.arrayBuffer());
+      await drawWaveform(document.getElementById('waveClean'), await cleanBlob.arrayBuffer());
+
+      downloadWrap.innerHTML = `<a class="btn btn-ghost" href="${cleanUrl}" download="enhanced.wav">Download enhanced.wav</a>`;
+
+      if (originalSnr !== null) {
+        document.getElementById('snrOriginal').textContent = `${originalSnr} dB`;
+        document.getElementById('snrEnhanced').textContent = `${enhancedSnr} dB`;
+        const impNum = parseFloat(improvement);
+        document.getElementById('snrImprovement').textContent = `${impNum > 0 ? '+' : ''}${improvement} dB`;
+        document.getElementById('snrRow').style.display = 'grid';
+        document.getElementById('snrNote').style.display = 'block';
+      }
+    } catch (err) {
+      showError(err.message || 'Something went wrong while processing this file.');
+    } finally {
+      enhanceBtn.disabled = false;
+      spinner.style.display = 'none';
+      enhanceBtnText.textContent = 'Enhance audio';
+    }
+  });
+</script>
+
+</body>
+</html>
