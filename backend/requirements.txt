@@ -1,0 +1,9 @@
+flask==3.0.3
+flask-cors==4.0.1
+numpy==1.26.4
+scipy==1.13.1
+scikit-learn==1.6.1
+soundfile==0.12.1
+librosa==0.10.2.post1
+joblib==1.4.2
+gunicorn==22.0.0
